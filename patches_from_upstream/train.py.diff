@@ -1,0 +1,45 @@
+--- a/train.py
++++ b/train.py
+@@ -36,6 +36,7 @@
+ 
+ 
+ def train_model(model,scheduler,optimizer,args,train_dataset, val_dataset, test_dataset):
++    os.makedirs(args.save_path, exist_ok=True)
+     
+     train_loader = DataLoader(
+         train_dataset,
+@@ -52,6 +53,7 @@
+     
+     scaler = torch.amp.GradScaler(device,enabled=True)      
+     for epoch in range(args.epochs):
++        model.current_epoch = epoch + 1
+         model.train()
+         progress_bar = tqdm.tqdm(
+             total=len(train_loader), desc="epoch % 3d" % (epoch + 1)
+@@ -67,7 +69,20 @@
+             scaler.update()
+ 
+             epoch_train_losses.append(loss.item())
+-            progress_bar.set_postfix({"train loss": np.mean(epoch_train_losses[-50:])})
++            postfix = {"train loss": np.mean(epoch_train_losses[-50:])}
++            if getattr(args, "use_i2cd_light", False) and hasattr(model, "last_i2cd_stats"):
++                postfix.update({
++                    "i2cd": model.last_i2cd_stats.get("i2cd", 0.0),
++                    "dis": model.last_i2cd_stats.get("dis", 0.0),
++                    "comp": model.last_i2cd_stats.get("comp", 0.0),
++                })
++            if getattr(args, "use_prompt_i2cd", False) and hasattr(model, "last_prompt_i2cd_stats"):
++                postfix.update({
++                    "p_i2cd": model.last_prompt_i2cd_stats.get("prompt_i2cd", 0.0),
++                    "p_comp": model.last_prompt_i2cd_stats.get("p_comp", 0.0),
++                    "p_mix": model.last_prompt_i2cd_stats.get("p_mix", 0.0),
++                })
++            progress_bar.set_postfix(postfix)
+             progress_bar.update()
+         scheduler.step()
+         
+@@ -130,4 +145,4 @@
+     model, optimizer = configure_model(args,train_dataset)
+     model.to(device)
+     scheduler = StepLR(optimizer, step_size=args.step_size, gamma=args.gamma)
+-    train_model(model,scheduler,optimizer,args,train_dataset, val_dataset, test_dataset) +    train_model(model,scheduler,optimizer,args,train_dataset, val_dataset, test_dataset) 

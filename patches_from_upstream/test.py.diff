@@ -1,0 +1,22 @@
+--- a/test.py
++++ b/test.py
+@@ -381,6 +381,14 @@
+         for batch_attr_obj in test_pairs:
+             token_com,token_att,token_obj = model.csp.construct_token_tensors(batch_attr_obj)
+             com_prompt_rep,att_prompt_reps,obj_prompt_reps = model.get_text_features(token_com,token_att,token_obj)
++            if getattr(args, "use_prompt_i2cd", False):
++                com_prompt_rep = model.refine_composition_prompts(
++                    com_prompt_rep,
++                    att_prompt_reps,
++                    obj_prompt_reps,
++                    batch_attr_obj,
++                    return_loss=False,
++                )
+             com_prompt_reps = torch.cat([com_prompt_reps, com_prompt_rep], dim=0)
+         all_logits = torch.Tensor()
+         all_attr_gt, all_obj_gt, all_pair_gt = [], [], []
+@@ -595,4 +603,4 @@
+         print(result)
+ 
+     print("done!")
+-    +    
